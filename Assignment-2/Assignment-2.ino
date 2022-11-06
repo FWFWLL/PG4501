@@ -1,6 +1,11 @@
 #include "pitches.h"
+#include <Time.h>
+#include <TimeLib.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7789.h>
+
+#define TIME_HEADER "T"
+#define TIME_REQUEST 7
 
 #define TFT_CS 10
 #define TFT_RST 9
@@ -48,35 +53,70 @@ void setup(void) {
 	Serial.print(" - ");
 	Serial.println(__TIME__);
 
-	// 240x135 TFT BEGIN
-	Serial.print("Initializing 240x135 TFT...");
+	set_time_to_compile_time();
 
 	tft.init(135, 240);
-
-	tft.fillScreen(ST77XX_BLACK);
-
-	drawText(xivPasta, ST77XX_WHITE);
-
-	Serial.println(" Finished");
-	// 240x135 TFT END
 
 	pinMode(BUZZER, OUTPUT);
 }
 
-#define arrlen(a) sizeof(a) / sizeof(a[0])
-
 void loop(void) {
+	if(timeStatus() != timeNotSet) {
+		drawTime();
+	}
+
+	// amogus();
+	delay(1000);
 }
 
-void drawText(const char* text, const uint16_t color) {
+const char month_names[] = "JanFebMarAprMayJunJulAugSepOctNovDec";
+
+// Function to set time to compile time using compiler macros
+void set_time_to_compile_time(void) {
+	// TIME
+	int hr, min, sec;
+	sscanf(__TIME__, "%d:%d:%d", &hr, &min, &sec);
+
+	// DATE
+	char s_month[5];
+	int day, yr;
+	sscanf(__DATE__, "%s %d %d", s_month, &day, &yr);
+
+	int month = 1 + (strstr(month_names, s_month) - month_names) / 3;
+
+	setTime(hr, min, sec, day, month, yr);
+}
+
+void drawText(const char* text, const int size, const uint16_t color) {
 	tft.setCursor(0, 0);
+	tft.setTextSize(size);
 	tft.setTextColor(color);
 	tft.setTextWrap(true);
 	tft.print(text);
 }
 
+void drawTime(void) {
+	tft.fillScreen(ST77XX_BLACK);
+
+	tft.setTextColor(ST77XX_WHITE);
+	tft.setCursor(0, 0);
+	tft.setTextSize(10);
+	tft.setTextWrap(false);
+
+	tft.println(hour());
+	drawDigits(minute());
+	drawDigits(second());
+}
+
+void drawDigits(int digits) {
+	if(digits < 10)
+		tft.print("0");
+
+	tft.println(digits);
+}
+
 void amogus(void) {
-	for(int note = 0; note < arrlen(notes); note++) {
+	for(int note = 0; note < sizeof(notes) / sizeof(notes[0]); note++) {
 		tone(BUZZER, notes[note], durations[note] / 2);
 		delay(durations[note]);
 	}
