@@ -13,6 +13,7 @@
 
 Adafruit_ST7789 tft(TFT_CS, TFT_DC, TFT_RST);
 
+#define PIR 7
 #define BUZZER 2
 
 const char* xivPasta = "Have you heard of the critically acclaimed MMORPG Final Fantasy XIV? With an expanded free trial which you can play through the entirety of A Realm Reborn and the award winning Heavensward expansion up to level 60 for free with no restrictions on playtime.";
@@ -43,6 +44,9 @@ int durations[] = {
 	1200,
 };
 
+int pirInit = 0;
+long compileTime = 0;
+
 void setup(void) {
 	Serial.begin(9600);
 
@@ -58,14 +62,25 @@ void setup(void) {
 	tft.init(135, 240);
 
 	pinMode(BUZZER, OUTPUT);
+	pinMode(PIR, INPUT);
+
+	compileTime = now();
+	Serial.println("Please wait 1 min for the PIR sensor to initialize...");
 }
 
 void loop(void) {
-	if(timeStatus() != timeNotSet) {
-		drawTime();
+	if(pirInit != 1 && now() >= (compileTime + 60)) {
+		Serial.println("PIR Sensor initialized!");
+		pirInit = 1;
+	} else if(digitalRead(PIR) == HIGH) {
+			Serial.println("Intruder Detected!");
+			drawAmogus();
+			amogusAlarm();
 	}
 
-	// amogus();
+	if(timeStatus() != timeNotSet)
+		drawTime();
+
 	delay(1000);
 }
 
@@ -115,7 +130,18 @@ void drawDigits(int digits) {
 	tft.println(digits);
 }
 
-void amogus(void) {
+void drawAmogus(void) {
+	tft.fillScreen(ST77XX_RED);
+
+	tft.setTextColor(ST77XX_BLACK);
+	tft.setCursor(0, 0);
+	tft.setTextSize(8);
+	tft.setTextWrap(false);
+
+	tft.println("SUS");
+}
+
+void amogusAlarm(void) {
 	for(int note = 0; note < sizeof(notes) / sizeof(notes[0]); note++) {
 		tone(BUZZER, notes[note], durations[note] / 2);
 		delay(durations[note]);
